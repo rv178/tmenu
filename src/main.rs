@@ -10,7 +10,7 @@ use tui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Span, Spans, Text},
-    widgets::{Block, Borders, List, ListItem, Paragraph},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame, Terminal,
 };
 use unicode_width::UnicodeWidthStr;
@@ -28,16 +28,33 @@ struct Tmenu {
     input_mode: InputMode,
     /// History of recorded messages
     search_string: String,
-    app_list: Vec<String>,
+    app_list: Vec<AppItem>,
+    index: usize,
 }
 
-impl Default for Tmenu {
+#[derive(Debug)]
+struct AppItem {
+    name: String,
+}
+
+impl Tmenu {
     fn default() -> Tmenu {
         Tmenu {
             input: String::new(),
             input_mode: InputMode::Normal,
             search_string: String::new(),
             app_list: Vec::new(),
+            index: 0,
+        }
+    }
+    fn next(&mut self) {
+        self.index = (self.index + 1) % self.app_list.len();
+    }
+    fn previous(&mut self) {
+        if self.index > 0 {
+            self.index -= 1;
+        } else {
+            self.index = self.app_list.len() - 1;
         }
     }
 }
@@ -83,6 +100,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     KeyCode::Char('q') => {
                         return Ok(());
                     }
+                    KeyCode::Up => {
+                        app.previous();
+                    }
+                    KeyCode::Down => {
+                        app.next();
+                    }
                     _ => {}
                 },
                 InputMode::Editing => match key.code {
@@ -111,8 +134,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                 let name = entry
                     .section("Desktop Entry")
                     .attr("Name")
-                    .expect("Attribute doesn't exist.");
-                app.app_list.push(name.to_string());
+                    .expect("Name doesn't exist.");
+                app.app_list.push(AppItem {
+                    name: name.to_string(),
+                });
             }
         }
     }
@@ -136,20 +161,40 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
         InputMode::Normal => (
             vec![
                 Span::raw("Press "),
-                Span::styled("q", Style::default().add_modifier(Modifier::BOLD)),
+                Span::styled(
+                    "q",
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue),
+                ),
                 Span::raw(" to exit, "),
-                Span::styled("i", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to start editing."),
+                Span::styled(
+                    "i",
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue),
+                ),
+                Span::raw(" to search, "),
+                Span::styled(
+                    "up/down",
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue),
+                ),
+                Span::raw(" to navigate."),
             ],
             Style::default().add_modifier(Modifier::BOLD),
         ),
         InputMode::Editing => (
             vec![
                 Span::raw("Press "),
-                Span::styled("Esc", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to stop editing, "),
-                Span::styled("Enter", Style::default().add_modifier(Modifier::BOLD)),
-                Span::raw(" to record the message"),
+                Span::styled(
+                    "Esc",
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue),
+                ),
+                Span::raw(" to stop searching."),
             ],
             Style::default(),
         ),
@@ -186,12 +231,24 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
         .app_list
         .iter()
         .enumerate()
-        .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i + 1, m)))];
+        .map(|(_i, m)| {
+            let content = vec![Spans::from(Span::raw(format!("{}", m.name.as_str())))];
             ListItem::new(content)
         })
         .collect();
-    let app_list =
-        List::new(app_list).block(Block::default().borders(Borders::ALL).title("Applications"));
-    f.render_widget(app_list, chunks[2]);
+
+    let mut state = ListState::default();
+    state.select(Some(app.index));
+
+    let list = List::new(app_list)
+        .block(Block::default().borders(Borders::ALL).title("App List"))
+        .style(Style::default().fg(Color::White))
+        .highlight_style(
+            Style::default()
+                .add_modifier(Modifier::BOLD)
+                .bg(Color::Blue)
+                .fg(Color::Black),
+        )
+        .highlight_symbol("> ");
+    f.render_stateful_widget(list, chunks[2], &mut state);
 }
