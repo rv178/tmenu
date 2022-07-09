@@ -3,7 +3,8 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use std::{error::Error, io};
+use freedesktop_entry_parser::parse_entry;
+use std::{error::Error, fs, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -27,7 +28,7 @@ struct Tmenu {
     input_mode: InputMode,
     /// History of recorded messages
     search_string: String,
-    apps: Vec<String>,
+    app_list: Vec<String>,
 }
 
 impl Default for Tmenu {
@@ -36,7 +37,7 @@ impl Default for Tmenu {
             input: String::new(),
             input_mode: InputMode::Normal,
             search_string: String::new(),
-            apps: Vec::new(),
+            app_list: Vec::new(),
         }
     }
 }
@@ -100,6 +101,18 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     }
                     _ => {}
                 },
+            }
+        }
+
+        for file in fs::read_dir("/usr/share/applications").unwrap() {
+            let file_name = file.unwrap().path().display().to_string();
+            if file_name.ends_with(".desktop") {
+                let entry = parse_entry(file_name)?;
+                let name = entry
+                    .section("Desktop Entry")
+                    .attr("Name")
+                    .expect("Attribute doesn't exist.");
+                app.app_list.push(name.to_string());
             }
         }
     }
@@ -169,16 +182,16 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
         }
     }
 
-    let apps: Vec<ListItem> = app
-        .apps
+    let app_list: Vec<ListItem> = app
+        .app_list
         .iter()
         .enumerate()
         .map(|(i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}: {}", i, m)))];
+            let content = vec![Spans::from(Span::raw(format!("{}: {}", i + 1, m)))];
             ListItem::new(content)
         })
         .collect();
-    let apps =
-        List::new(apps).block(Block::default().borders(Borders::ALL).title("Tmenulications"));
-    f.render_widget(apps, chunks[2]);
+    let app_list =
+        List::new(app_list).block(Block::default().borders(Borders::ALL).title("Applications"));
+    f.render_widget(app_list, chunks[2]);
 }
