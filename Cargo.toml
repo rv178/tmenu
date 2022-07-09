@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 crossterm = "0.24.0"
 tui = "0.18.0"
+unicode-width = "0.1.9"
