@@ -4,6 +4,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use freedesktop_entry_parser::parse_entry;
+use std::process::{exit, Command, Stdio};
 use std::{error::Error, fs, io};
 use tui::{
     backend::{Backend, CrosstermBackend},
@@ -35,6 +36,7 @@ struct Tmenu {
 #[derive(Debug)]
 struct AppItem {
     name: String,
+    cmd: String,
 }
 
 impl Tmenu {
@@ -97,9 +99,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                 .attr("Name")
                 .expect("Name doesn't exist.");
 
-            if app.app_list.iter().find(|x| x.name == name).is_none() {
+            if let Some(cmd) = entry.section("Desktop Entry").attr("Exec") {
                 app.app_list.push(AppItem {
                     name: name.to_string(),
+                    cmd: cmd.to_string(),
                 });
             }
         }
@@ -122,6 +125,23 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     }
                     KeyCode::Char('j') => {
                         app.next();
+                    }
+                    KeyCode::Enter => {
+                        match Command::new("sh")
+                            .arg("-c")
+                            .arg(app.app_list[app.index].cmd.to_string())
+                            .stdin(Stdio::null())
+                            .stdout(Stdio::null())
+                            .stderr(Stdio::null())
+                            .output()
+                        {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("Failed to execute command. Error: `{}`", e);
+                            }
+                        }
+
+                        exit(0);
                     }
                     KeyCode::Up => {
                         app.previous();
