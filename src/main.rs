@@ -89,6 +89,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result<()> {
     loop {
+        for file in fs::read_dir("/usr/share/applications").unwrap() {
+            let file_name = file.unwrap().path().display().to_string();
+            if file_name.ends_with(".desktop") {
+                let entry = parse_entry(file_name)?;
+                let name = entry
+                    .section("Desktop Entry")
+                    .attr("Name")
+                    .expect("Name doesn't exist.");
+
+                if app.app_list.iter().find(|x| x.name == name).is_none() {
+                    app.app_list.push(AppItem {
+                        name: name.to_string(),
+                    });
+                }
+            }
+        }
+
         terminal.draw(|f| ui(f, &app))?;
 
         if let Event::Key(key) = event::read()? {
@@ -99,6 +116,12 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     }
                     KeyCode::Char('q') => {
                         return Ok(());
+                    }
+                    KeyCode::Char('k') => {
+                        app.previous();
+                    }
+                    KeyCode::Char('j') => {
+                        app.next();
                     }
                     KeyCode::Up => {
                         app.previous();
@@ -124,20 +147,6 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     }
                     _ => {}
                 },
-            }
-        }
-
-        for file in fs::read_dir("/usr/share/applications").unwrap() {
-            let file_name = file.unwrap().path().display().to_string();
-            if file_name.ends_with(".desktop") {
-                let entry = parse_entry(file_name)?;
-                let name = entry
-                    .section("Desktop Entry")
-                    .attr("Name")
-                    .expect("Name doesn't exist.");
-                app.app_list.push(AppItem {
-                    name: name.to_string(),
-                });
             }
         }
     }
@@ -177,6 +186,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
                 Span::raw(" to search, "),
                 Span::styled(
                     "up/down",
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::Blue),
+                ),
+                Span::raw(" or "),
+                Span::styled(
+                    "j/k",
                     Style::default()
                         .add_modifier(Modifier::BOLD)
                         .fg(Color::Blue),
