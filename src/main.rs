@@ -25,6 +25,7 @@ struct Tmenu {
 #[derive(Debug, Clone)]
 struct AppItem {
     name: String,
+    desc: String,
     cmd: String,
 }
 
@@ -91,10 +92,21 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
             match nodsp {
                 None | Some("false") => {
                     if let Some(cmd) = entry.section("Desktop Entry").attr("Exec") {
-                        app.app_list.push(AppItem {
-                            name: name.to_string(),
-                            cmd: cmd.to_string(),
-                        });
+                        if let Some(generic_name) =
+                            entry.section("Desktop Entry").attr("GenericName")
+                        {
+                            app.app_list.push(AppItem {
+                                name: name.to_string(),
+                                desc: generic_name.to_string(),
+                                cmd: cmd.to_string(),
+                            });
+                        } else {
+                            app.app_list.push(AppItem {
+                                name: name.to_string(),
+                                desc: "".to_string(),
+                                cmd: cmd.to_string(),
+                            });
+                        }
                     }
                 }
                 _ => {}
@@ -194,7 +206,13 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
         .iter()
         .enumerate()
         .map(|(_i, m)| {
-            let content = vec![Spans::from(Span::raw(format!("{}", m.name.as_str())))];
+            let mut display_str = String::new();
+            if m.desc == "" {
+                display_str.push_str(&format!("{}", m.name));
+            } else {
+                display_str.push_str(&format!("{} [{}]", m.name, m.desc));
+            }
+            let content = vec![Spans::from(Span::raw(display_str))];
             ListItem::new(content)
         })
         .collect();
