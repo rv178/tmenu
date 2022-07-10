@@ -26,7 +26,7 @@ struct Tmenu {
     index: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct AppItem {
     name: String,
     cmd: String,
@@ -133,6 +133,9 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                 KeyCode::Backspace => {
                     app.input.pop();
                 }
+                KeyCode::Esc => {
+                    exit(0);
+                }
                 _ => {}
             }
         }
@@ -162,7 +165,14 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
                     .add_modifier(Modifier::BOLD)
                     .fg(Color::Blue),
             ),
-            Span::raw(" to navigate. "),
+            Span::raw(" to navigate, "),
+            Span::styled(
+                "Esc",
+                Style::default()
+                    .add_modifier(Modifier::BOLD)
+                    .fg(Color::Blue),
+            ),
+            Span::raw(" to exit. "),
         ],
         Style::default().add_modifier(Modifier::BOLD),
     );
@@ -172,7 +182,7 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
     f.render_widget(help_message, chunks[0]);
 
     let input = Paragraph::new(app.input.as_ref())
-        .block(Block::default().borders(Borders::ALL).title("Input"));
+        .block(Block::default().borders(Borders::ALL).title("Search"));
     f.render_widget(input, chunks[1]);
     f.set_cursor(chunks[1].x + app.input.width() as u16 + 1, chunks[1].y + 1);
 
