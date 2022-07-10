@@ -47,6 +47,14 @@ impl Tmenu {
             self.index = self.app_list.len() - 1;
         }
     }
+    fn chain_hook(&mut self) {
+        let original_hook = std::panic::take_hook();
+
+        std::panic::set_hook(Box::new(move |panic| {
+            reset_terminal().unwrap();
+            original_hook(panic);
+        }));
+    }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -77,7 +85,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn reset_terminal() -> io::Result<()> {
+    disable_raw_mode()?;
+    crossterm::execute!(io::stdout(), LeaveAlternateScreen)?;
+
+    Ok(())
+}
+
 fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result<()> {
+    app.chain_hook();
+
     for file in fs::read_dir("/usr/share/applications").unwrap() {
         let file_name = file.unwrap().path().display().to_string();
         if file_name.ends_with(".desktop") {
@@ -134,6 +151,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                         }
                     }
 
+                    reset_terminal().unwrap();
                     exit(0);
                 }
                 KeyCode::Up => {
