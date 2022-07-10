@@ -137,7 +137,7 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                     app.input.pop();
                 }
                 KeyCode::Esc => {
-                    exit(0);
+                    return Ok(());
                 }
                 _ => {}
             }
