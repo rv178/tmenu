@@ -81,16 +81,23 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
         let file_name = file.unwrap().path().display().to_string();
         if file_name.ends_with(".desktop") {
             let entry = parse_entry(file_name)?;
+
             let name = entry
                 .section("Desktop Entry")
                 .attr("Name")
                 .expect("Name doesn't exist.");
+            let nodsp = entry.section("Desktop Entry").attr("NoDisplay");
 
-            if let Some(cmd) = entry.section("Desktop Entry").attr("Exec") {
-                app.app_list.push(AppItem {
-                    name: name.to_string(),
-                    cmd: cmd.to_string(),
-                });
+            match nodsp {
+                None | Some("false") => {
+                    if let Some(cmd) = entry.section("Desktop Entry").attr("Exec") {
+                        app.app_list.push(AppItem {
+                            name: name.to_string(),
+                            cmd: cmd.to_string(),
+                        });
+                    }
+                }
+                _ => {}
             }
         }
     }
