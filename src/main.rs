@@ -16,12 +16,8 @@ use tui::{
 };
 use unicode_width::UnicodeWidthStr;
 
-/// Tmenu holds the state of the application
 struct Tmenu {
-    /// Current value of the input box
     input: String,
-    /// Current input mode
-    /// History of recorded messages
     app_list: Vec<AppItem>,
     index: usize,
 }
