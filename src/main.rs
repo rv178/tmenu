@@ -6,6 +6,7 @@ use crossterm::{
 use freedesktop_entry_parser::parse_entry;
 use std::process::{exit, Command, Stdio};
 use std::{error::Error, fs, io};
+use std::fmt::Write as _;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -139,10 +140,10 @@ fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: Tmenu) -> io::Result
                 KeyCode::Enter => {
                     match Command::new("sh")
                         .arg("-c")
-                        .arg(app.app_list[app.index].cmd.to_string())
-                        .stdin(Stdio::null())
-                        .stdout(Stdio::null())
-                        .stderr(Stdio::null())
+                        .arg(&app.app_list[app.index].cmd)
+                        .stdin(Stdio::inherit())
+                        .stdout(Stdio::inherit())
+                        .stderr(Stdio::inherit())
                         .output()
                     {
                         Ok(_) => {}
@@ -225,10 +226,10 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
         .enumerate()
         .map(|(_i, m)| {
             let mut display_str = String::new();
-            if m.desc == "" {
-                display_str.push_str(&format!("{}", m.name));
+            if m.desc.is_empty() {
+                display_str.push_str(&m.name.to_string());
             } else {
-                display_str.push_str(&format!("{} [{}]", m.name, m.desc));
+                write!(display_str, "{} [{}]", m.name, m.desc).expect("Failed to write to display.");
             }
             let content = vec![Spans::from(Span::raw(display_str))];
             ListItem::new(content)
