@@ -4,9 +4,9 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use freedesktop_entry_parser::parse_entry;
+use std::fmt::Write as _;
 use std::process::{exit, Command, Stdio};
 use std::{error::Error, fs, io};
-use std::fmt::Write as _;
 use tui::{
     backend::{Backend, CrosstermBackend},
     layout::{Constraint, Direction, Layout},
@@ -229,7 +229,8 @@ fn ui<B: Backend>(f: &mut Frame<B>, app: &Tmenu) {
             if m.desc.is_empty() {
                 display_str.push_str(&m.name.to_string());
             } else {
-                write!(display_str, "{} [{}]", m.name, m.desc).expect("Failed to write to display.");
+                write!(display_str, "{} [{}]", m.name, m.desc)
+                    .expect("Failed to write to display.");
             }
             let content = vec![Spans::from(Span::raw(display_str))];
             ListItem::new(content)

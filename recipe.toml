@@ -1,5 +1,13 @@
+[env]
+BIN_NAME="tmenu"
+COMPILER_FLAGS="--release"
+INSTALL_PREFIX="/usr/bin"
+
 [build]
-cmd = "cargo build && cp -r ./target/debug/tmenu ./bin/tmenu"
+cmd = """
+cargo build $COMPILER_FLAGS &&
+cp -r ./target/release/$BIN_NAME ./bin/$BIN_NAME
+"""
 
 [[custom]]
 name = "clean"
@@ -8,12 +16,21 @@ run = false
 
 [[custom]]
 name = "setup"
-cmd = "mkdir -p bin && rustup install stable && rustup default stable"
+cmd = """
+mkdir -p bin &&
+rustup install stable &&
+rustup default stable
+"""
 run = false
 
 [[custom]]
-name = "release"
-cmd = "cargo build --release && cp -r ./target/release/tmenu ./bin/tmenu"
+name = "install"
+cmd = "cp ./bin/$BIN_NAME $INSTALL_PREFIX/$BIN_NAME"
+run = false
+
+[[custom]]
+name = "uninstall"
+cmd = "rm -rf $INSTALL_PREFIX/$BIN_NAME"
 run = false
 
 [[pre]]
