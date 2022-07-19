@@ -22,7 +22,6 @@ rustup default stable
 run = false
 
 [custom.install]
-name = "install"
 cmd = "cp ./bin/$BIN_NAME $INSTALL_PREFIX/$BIN_NAME"
 run = false
 
